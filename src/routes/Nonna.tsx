@@ -79,7 +79,7 @@ export default function Nonna() {
 
   return (
     <main className="nonna">
-      <p className="nonna__greeting">Hello {displayName} ❤️</p>
+      <p className="nonna__greeting">Hello {displayName}!</p>
       <p className="nonna__date">{today}</p>
 
       {state.kind === 'loading' && (
@@ -111,7 +111,7 @@ export default function Nonna() {
           <div className="nonna__tick" aria-hidden="true">
             ✓
           </div>
-          <p className="nonna__confirm-text">Thanks {displayName}, see you tomorrow ❤️</p>
+          <p className="nonna__confirm-text">Thanks {displayName}, see you tomorrow!</p>
           <p className="nonna__confirm-time">
             Checked in at {formatTimeInTz(state.checkin.checked_in_at, tz)}
           </p>

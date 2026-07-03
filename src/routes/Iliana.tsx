@@ -24,6 +24,7 @@ interface DashData {
   lastCheckin: Checkin | null;
   /** Earliest check-in date — days before this are "no data", not "missed". */
   firstCheckinDate: string | null;
+  nonnaName: string;
 }
 
 const STATUS_META: Record<
@@ -88,6 +89,7 @@ export default function Iliana() {
           lastCheckin: nonnaCheckins[0] ?? null,
           firstCheckinDate:
             byDate.size > 0 ? [...byDate.keys()].sort()[0] : null,
+          nonnaName: nonna?.display_name ?? 'Nonna',
         });
       } catch {
         setError('Could not load the dashboard. Check your connection and reload.');
@@ -129,7 +131,7 @@ export default function Iliana() {
       <header className="dash__header">
         <div>
           <h1 className="dash__title">Good morning, {session?.displayName}</h1>
-          <p className="dash__muted">Nonna's check-ins</p>
+          <p className="dash__muted">{data.nonnaName}'s check-ins</p>
         </div>
         <button className="dash__logout" onClick={logOut}>
           Log out
