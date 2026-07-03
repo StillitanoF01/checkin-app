@@ -1,0 +1,127 @@
+/*
+ * Nonna's accessibility-first theme. Deliberately NOT bound to the Pinterest chrome.
+ * Goals: huge tap target, large high-contrast text, no menus, no scrolling.
+ * Base text >= 28px, the check-in button fills most of the screen.
+ */
+.nonna {
+  --nonna-bg: #ffffff;
+  --nonna-ink: #1a1a1a;
+  --nonna-go: #157a3f; /* calm high-contrast green for the OK action */
+  --nonna-go-pressed: #0f5e30;
+  --nonna-on-go: #ffffff;
+
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--nonna-bg);
+  color: var(--nonna-ink);
+  font-family: var(--font-sans);
+  font-size: 30px;
+  line-height: 1.35;
+  padding: max(24px, env(safe-area-inset-top)) 24px
+    max(24px, env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.nonna__greeting {
+  font-size: 34px;
+  font-weight: 700;
+  margin: 16px 0 8px;
+}
+
+.nonna__date {
+  font-size: 24px;
+  color: #444;
+  margin-bottom: 24px;
+}
+
+/* The one giant button. Fills the vertical space, impossible to miss. */
+.nonna__button {
+  flex: 1;
+  width: 100%;
+  min-height: 320px;
+  border: none;
+  border-radius: 28px;
+  background: var(--nonna-go);
+  color: var(--nonna-on-go);
+  font-family: inherit;
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: pre-line;
+  padding: 24px;
+  cursor: pointer;
+  box-shadow: 0 8px 0 var(--nonna-go-pressed);
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
+}
+
+.nonna__button:active {
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 var(--nonna-go-pressed);
+}
+
+.nonna__button:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* Confirmed state — big green tick, reassuring message. */
+.nonna__confirmed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.nonna__tick {
+  width: 180px;
+  height: 180px;
+  border-radius: var(--radius-full);
+  background: var(--nonna-go);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 110px;
+  line-height: 1;
+}
+
+.nonna__confirm-text {
+  font-size: 34px;
+  font-weight: 700;
+}
+
+.nonna__confirm-time {
+  font-size: 26px;
+  color: #444;
+}
+
+/* Tiny, out-of-the-way "not Nonna?" affordance. */
+.nonna__switch {
+  margin-top: 20px;
+  background: none;
+  border: none;
+  color: #6a6a6a;
+  font-family: inherit;
+  font-size: 18px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.nonna__error {
+  color: #9e0a0a;
+  font-size: 22px;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nonna__button {
+    transition: none;
+  }
+  .nonna__button:active {
+    transform: none;
+  }
+}

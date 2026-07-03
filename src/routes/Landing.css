@@ -1,0 +1,77 @@
+.landing {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-section);
+  padding: var(--space-xxl) var(--space-xl)
+    max(var(--space-xxl), env(safe-area-inset-bottom));
+  background: var(--surface-soft);
+}
+
+.landing__brand {
+  text-align: center;
+}
+
+.landing__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 44px;
+  font-weight: 800;
+}
+
+.landing__title {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--ink);
+  margin: var(--space-lg) 0 var(--space-xs);
+}
+
+.landing__tag {
+  font-size: 18px;
+  color: var(--mute);
+  margin: 0;
+}
+
+.landing__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 420px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.landing__btn {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  min-height: 88px;
+  transition: transform 0.05s ease, filter 0.1s ease;
+}
+
+.landing__btn:active {
+  transform: scale(0.99);
+  filter: brightness(0.96);
+}
+
+.landing__btn--nonna {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.landing__btn--iliana {
+  background: var(--secondary-bg);
+  color: var(--ink);
+}

@@ -1,0 +1,254 @@
+.dash {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg)
+    max(var(--space-xxl), env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.dash__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.dash__title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+  color: var(--ink);
+  margin: 0;
+}
+
+.dash__muted {
+  color: var(--mute);
+  margin: var(--space-xxs) 0 0;
+}
+
+.dash__error {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.dash__logout {
+  background: var(--secondary-bg);
+  color: var(--ink);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-lg);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+}
+
+.card__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 var(--space-lg);
+}
+
+/* ── Today's status ── */
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.status__icon {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.status__label {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.status__sub {
+  color: var(--mute);
+  margin: var(--space-xxs) 0 0;
+}
+
+.status--ok {
+  border-color: var(--success-pale);
+  background: color-mix(in srgb, var(--success-pale) 35%, var(--canvas));
+}
+.status--missed {
+  border-color: var(--error);
+  background: color-mix(in srgb, var(--error) 8%, var(--canvas));
+}
+.status--late {
+  border-color: var(--warning-pale);
+  background: color-mix(in srgb, var(--warning-pale) 45%, var(--canvas));
+}
+
+/* ── Stats ── */
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+.stat {
+  text-align: center;
+  padding: var(--space-lg);
+}
+
+.stat__value {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.stat__label {
+  color: var(--mute);
+  font-size: 14px;
+  margin: var(--space-xxs) 0 0;
+}
+
+/* ── History ── */
+.history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.history__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--hairline-soft);
+  font-size: 16px;
+}
+
+.history__row:last-child {
+  border-bottom: none;
+}
+
+.history__date {
+  color: var(--body);
+  font-weight: 500;
+}
+
+.history__today {
+  color: var(--mute);
+  font-weight: 400;
+}
+
+.history__ok {
+  color: var(--success-deep);
+  font-weight: 600;
+}
+.history__missed {
+  color: var(--error);
+  font-weight: 700;
+}
+.history__pending {
+  color: var(--mute);
+}
+.history__none {
+  color: var(--stone);
+}
+
+/* ── Fields / forms ── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-lg);
+}
+
+.field__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.field__input {
+  height: 44px;
+  border: 1px solid var(--ash);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-md);
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--canvas);
+}
+
+.field__input:focus-visible {
+  border-color: var(--ink);
+  outline: 3px solid var(--focus-outer);
+  outline-offset: 1px;
+}
+
+.field__error {
+  color: var(--error);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.settings__row--split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+.settings__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.settings__saved {
+  color: var(--success-deep);
+  font-weight: 600;
+}
+
+.settings__note {
+  color: var(--mute);
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0 0 var(--space-lg);
+}
+
+/* ── Buttons ── */
+.btn {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-xl);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn--primary {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.btn--primary:disabled {
+  background: var(--surface-card);
+  color: var(--ash);
+  cursor: default;
+}
+
+.btn--secondary {
+  background: var(--secondary-bg);
+  color: var(--ink);
+}

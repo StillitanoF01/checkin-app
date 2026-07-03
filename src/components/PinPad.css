@@ -1,0 +1,66 @@
+.pinpad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xl);
+  width: 100%;
+  max-width: 340px;
+}
+
+.pinpad__dots {
+  display: flex;
+  gap: var(--space-lg);
+}
+
+.pinpad__dot {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--stone);
+  background: transparent;
+  transition: background 0.1s ease, border-color 0.1s ease;
+}
+
+.pinpad__dot--filled {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.pinpad__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  width: 100%;
+}
+
+.pinpad__key {
+  aspect-ratio: 1;
+  min-height: 72px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--surface-card);
+  color: var(--ink);
+  font-size: 32px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.08s ease;
+}
+
+.pinpad__key:active {
+  background: var(--secondary-pressed);
+}
+
+.pinpad__key:disabled {
+  color: var(--ash);
+  cursor: default;
+}
+
+.pinpad__key--empty {
+  background: transparent;
+  pointer-events: none;
+}
+
+.pinpad__key--action {
+  background: transparent;
+  font-size: 28px;
+}
