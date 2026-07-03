@@ -54,6 +54,12 @@ export async function setPin(role: Role, pin: string): Promise<boolean> {
   return delay(true);
 }
 
+export async function resetPin(role: Role, pin: string): Promise<boolean> {
+  store.pins[role] = pin;
+  save();
+  return delay(true);
+}
+
 export async function verifyPin(
   role: Role,
   pin: string

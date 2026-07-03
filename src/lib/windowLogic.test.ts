@@ -82,6 +82,40 @@ describe('windowState — phases', () => {
   });
 });
 
+describe('windowState — early check-in (before the window opens)', () => {
+  it('counts a pre-window check-in as fully on-time, not late', () => {
+    // She wakes up at 5:15am, well before the 06:00 window, and checks in.
+    const early = new Date('2025-01-15T05:15:00+11:00');
+    const d = windowState(
+      inputs({ now: early, checkedIn: true, checkedInAt: early })
+    );
+    expect(d.status).toBe('checked_in');
+    expect(d.checkinNotifyDue).toBe(true); // Iliana still gets the normal "all good" ping
+  });
+
+  it('never fires a reminder or missed alert once checked in early', () => {
+    // Even once the clock reaches the 06:00 and 10:00 marks, nothing else is due.
+    const early = new Date('2025-01-15T05:15:00+11:00');
+    const atWindowOpen = windowState(
+      inputs({
+        now: new Date('2025-01-15T06:00:00+11:00'),
+        checkedIn: true,
+        checkedInAt: early,
+      })
+    );
+    expect(atWindowOpen.reminderDue).toBe(false);
+    const afterWindowClose = windowState(
+      inputs({
+        now: new Date('2025-01-15T10:05:00+11:00'),
+        checkedIn: true,
+        checkedInAt: early,
+      })
+    );
+    expect(afterWindowClose.missedDue).toBe(false);
+    expect(afterWindowClose.status).toBe('checked_in');
+  });
+});
+
 describe('windowState — 06:00 reminder', () => {
   it('is due when open, not checked in, not yet sent', () => {
     expect(windowState(inputs({})).reminderDue).toBe(true);

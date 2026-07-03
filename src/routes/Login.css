@@ -42,3 +42,14 @@
   margin: 0;
   max-width: 340px;
 }
+
+/* Only rendered at all after repeated wrong PINs — kept understated even then. */
+.login__reset {
+  background: none;
+  border: none;
+  color: var(--mute);
+  font-size: 15px;
+  text-decoration: underline;
+  padding: var(--space-sm) 0;
+  cursor: pointer;
+}

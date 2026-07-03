@@ -31,6 +31,17 @@ export async function setPin(role: Role, pin: string): Promise<boolean> {
   return data === true;
 }
 
+/** "Forgot PIN": overwrites an existing PIN unconditionally. Returns true on success. */
+export async function resetPin(role: Role, pin: string): Promise<boolean> {
+  if (USE_MOCK) return mock.resetPin(role, pin);
+  const { data, error } = await supabase.rpc('reset_pin', {
+    p_role: role,
+    p_pin: pin,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
 /** Verify a PIN. Returns the matching profile, or null on failure. */
 export async function verifyPin(
   role: Role,

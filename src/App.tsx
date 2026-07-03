@@ -12,14 +12,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login/:role" element={<Login />} />
-        <Route
-          path="/nonna"
-          element={
-            <RequireRole role="nonna">
-              <Nonna />
-            </RequireRole>
-          }
-        />
+        {/* Nonna has no PIN — the whole point is one tap, no barrier. A Telegram
+            deep-link or the landing button goes straight here. */}
+        <Route path="/nonna" element={<Nonna />} />
         <Route
           path="/iliana"
           element={

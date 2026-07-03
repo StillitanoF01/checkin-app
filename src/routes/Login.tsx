@@ -1,14 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { Navigate, useNavigate, useParams, Link } from 'react-router-dom';
 import PinPad from '../components/PinPad';
-import { getProfile, setPin, verifyPin } from '../lib/api';
+import { getProfile, resetPin, setPin, verifyPin } from '../lib/api';
 import { useSession } from '../auth/session';
 import type { Profile, Role } from '../lib/types';
 import './Login.css';
 
 const PIN_LENGTH = 4;
+// After this many wrong PINs in a row, offer a "forgot PIN" reset link.
+const RESET_AFTER_ATTEMPTS = 5;
 
-type Phase = 'loading' | 'setup-enter' | 'setup-confirm' | 'login' | 'error-load';
+type Phase =
+  | 'loading'
+  | 'setup-enter'
+  | 'setup-confirm'
+  | 'login'
+  | 'reset-enter'
+  | 'reset-confirm'
+  | 'error-load';
 
 export default function Login() {
   const { role } = useParams<{ role: Role }>();
@@ -21,9 +30,10 @@ export default function Login() {
   const [firstEntry, setFirstEntry] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [wrongAttempts, setWrongAttempts] = useState(0);
   const submitting = useRef(false);
 
-  const validRole = role === 'nonna' || role === 'iliana';
+  const validRole = role === 'iliana';
 
   // Load the profile to decide setup vs login.
   useEffect(() => {
@@ -57,10 +67,10 @@ export default function Login() {
       setBusy(true);
       setError(null);
       try {
-        if (phase === 'setup-enter') {
+        if (phase === 'setup-enter' || phase === 'reset-enter') {
           setFirstEntry(pin);
           setPinValue('');
-          setPhase('setup-confirm');
+          setPhase(phase === 'setup-enter' ? 'setup-confirm' : 'reset-confirm');
         } else if (phase === 'setup-confirm') {
           if (pin !== firstEntry) {
             setError("Those didn't match — let's try again.");
@@ -82,11 +92,33 @@ export default function Login() {
             displayName: profile.display_name,
           });
           navigate(`/${role}`, { replace: true });
+        } else if (phase === 'reset-confirm') {
+          if (pin !== firstEntry) {
+            setError("Those didn't match — let's try again.");
+            setFirstEntry('');
+            setPinValue('');
+            setPhase('reset-enter');
+            return;
+          }
+          const ok = await resetPin(role as Role, pin);
+          if (!ok || !profile) {
+            setError('Could not reset the PIN. Please try again.');
+            setPinValue('');
+            setPhase('reset-enter');
+            return;
+          }
+          signIn({
+            profileId: profile.id,
+            role: role as Role,
+            displayName: profile.display_name,
+          });
+          navigate(`/${role}`, { replace: true });
         } else if (phase === 'login') {
           const match = await verifyPin(role as Role, pin);
           if (!match) {
             setError('Wrong PIN. Please try again.');
             setPinValue('');
+            setWrongAttempts((n) => n + 1);
             return;
           }
           signIn({
@@ -106,6 +138,18 @@ export default function Login() {
     };
     void run();
   }, [pin, phase, firstEntry, profile, role, navigate, signIn]);
+
+  const startReset = () => {
+    setError(null);
+    setFirstEntry('');
+    setPinValue('');
+    setWrongAttempts(0);
+    setPhase('reset-enter');
+  };
+
+  // Nonna has no PIN at all — send any stale /login/nonna link straight to her screen.
+  // (Checked here, after every hook above has already run, so hook order stays stable.)
+  if (role === 'nonna') return <Navigate to="/nonna" replace />;
 
   if (!validRole) {
     return (
@@ -127,7 +171,11 @@ export default function Login() {
           ? `Create a PIN for ${profile?.display_name ?? role}`
           : phase === 'setup-confirm'
             ? 'Re-enter the PIN to confirm'
-            : `Enter ${profile?.display_name ?? role}'s PIN`;
+            : phase === 'reset-enter'
+              ? `Choose a new PIN for ${profile?.display_name ?? role}`
+              : phase === 'reset-confirm'
+                ? 'Re-enter the new PIN to confirm'
+                : `Enter ${profile?.display_name ?? role}'s PIN`;
 
   return (
     <main className="login">
@@ -144,7 +192,9 @@ export default function Login() {
 
       {(phase === 'setup-enter' ||
         phase === 'setup-confirm' ||
-        phase === 'login') && (
+        phase === 'login' ||
+        phase === 'reset-enter' ||
+        phase === 'reset-confirm') && (
         <>
           <PinPad
             value={pin}
@@ -160,8 +210,14 @@ export default function Login() {
               {error}
             </p>
           )}
-          {phase === 'setup-enter' && (
+          {(phase === 'setup-enter' || phase === 'reset-enter') && (
             <p className="login__hint">Choose a 4-digit PIN you'll remember.</p>
+          )}
+          {/* Hidden by default — only appears after repeated wrong PINs. */}
+          {phase === 'login' && wrongAttempts >= RESET_AFTER_ATTEMPTS && (
+            <button type="button" className="login__reset" onClick={startReset}>
+              Forgot your PIN? Reset it
+            </button>
           )}
         </>
       )}

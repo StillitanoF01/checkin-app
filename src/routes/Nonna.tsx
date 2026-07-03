@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSession } from '../auth/session';
-import { getCheckinForDate, getSettings, recordCheckin } from '../lib/api';
+import { getCheckinForDate, getProfile, getSettings, recordCheckin } from '../lib/api';
 import { localDateInTz } from '../lib/windowLogic';
 import { formatDateLong, formatTimeInTz } from '../lib/format';
-import type { Checkin } from '../lib/types';
+import type { Checkin, Profile } from '../lib/types';
 import '../theme/nonna.css';
 
 const DEFAULT_TZ = 'Australia/Sydney';
 
+// Nonna's screen has no PIN: it's the one tap she needs each morning, and a Telegram
+// deep-link should land here directly. Her profile is looked up by role, not by session.
 type State =
   | { kind: 'loading' }
   | { kind: 'ready' }
@@ -16,23 +17,25 @@ type State =
   | { kind: 'error'; message: string };
 
 export default function Nonna() {
-  const { session, signOut } = useSession();
   const navigate = useNavigate();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [tz, setTz] = useState(DEFAULT_TZ);
-
-  const switchUser = () => {
-    signOut();
-    navigate('/', { replace: true });
-  };
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [submitting, setSubmitting] = useState(false);
 
-  // On load: find out the timezone and whether she's already checked in today.
+  // On load: find Nonna's profile, the timezone, and whether she's already checked in.
   useEffect(() => {
-    if (!session) return;
     let cancelled = false;
     (async () => {
       try {
+        const nonna = await getProfile('nonna');
+        if (cancelled) return;
+        if (!nonna) {
+          setState({ kind: 'error', message: "We couldn't find your profile." });
+          return;
+        }
+        setProfile(nonna);
+
         let zone = DEFAULT_TZ;
         try {
           zone = (await getSettings()).timezone || DEFAULT_TZ;
@@ -43,7 +46,7 @@ export default function Nonna() {
         setTz(zone);
 
         const today = localDateInTz(new Date(), zone);
-        const existing = await getCheckinForDate(session.profileId, today);
+        const existing = await getCheckinForDate(nonna.id, today);
         if (cancelled) return;
         setState(
           existing ? { kind: 'confirmed', checkin: existing } : { kind: 'ready' }
@@ -56,13 +59,13 @@ export default function Nonna() {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, []);
 
   const handleCheckIn = async () => {
-    if (!session || submitting) return;
+    if (!profile || submitting) return;
     setSubmitting(true);
     try {
-      const checkin = await recordCheckin(session.profileId);
+      const checkin = await recordCheckin(profile.id);
       setState({ kind: 'confirmed', checkin });
     } catch {
       setState({ kind: 'error', message: "That didn't work. Please try again." });
@@ -72,10 +75,11 @@ export default function Nonna() {
   };
 
   const today = formatDateLong(localDateInTz(new Date(), tz));
+  const displayName = profile?.display_name ?? 'Nonna';
 
   return (
     <main className="nonna">
-      <p className="nonna__greeting">Hello {session?.displayName} ❤️</p>
+      <p className="nonna__greeting">Hello {displayName} ❤️</p>
       <p className="nonna__date">{today}</p>
 
       {state.kind === 'loading' && (
@@ -90,7 +94,7 @@ export default function Nonna() {
             type="button"
             className="nonna__button"
             onClick={handleCheckIn}
-            disabled={submitting}
+            disabled={submitting || !profile}
           >
             {submitting ? 'Sending…' : "I'M OK\nCHECK IN"}
           </button>
@@ -107,17 +111,19 @@ export default function Nonna() {
           <div className="nonna__tick" aria-hidden="true">
             ✓
           </div>
-          <p className="nonna__confirm-text">
-            Thanks {session?.displayName}, see you tomorrow ❤️
-          </p>
+          <p className="nonna__confirm-text">Thanks {displayName}, see you tomorrow ❤️</p>
           <p className="nonna__confirm-time">
             Checked in at {formatTimeInTz(state.checkin.checked_in_at, tz)}
           </p>
         </div>
       )}
 
-      <button type="button" className="nonna__switch" onClick={switchUser}>
-        Not {session?.displayName}? Switch user
+      <button
+        type="button"
+        className="nonna__switch"
+        onClick={() => navigate('/', { replace: true })}
+      >
+        Not {displayName}?
       </button>
     </main>
   );

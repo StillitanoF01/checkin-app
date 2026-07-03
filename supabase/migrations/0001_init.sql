@@ -134,6 +134,30 @@ begin
 end;
 $$;
 
+-- "Forgot PIN" reset: overwrites an existing PIN unconditionally (unlike set_pin, which
+-- refuses if one is already set). Used by the UI after repeated wrong attempts.
+create or replace function reset_pin(p_role text, p_pin text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  updated int;
+begin
+  if p_pin !~ '^\d{4,8}$' then
+    raise exception 'PIN must be 4-8 digits';
+  end if;
+
+  update profiles
+     set pin_hash = crypt(p_pin, gen_salt('bf'))
+   where role = p_role;
+
+  get diagnostics updated = row_count;
+  return updated = 1;
+end;
+$$;
+
 -- Verify a PIN. Returns the profile row (no hash) on success, nothing on failure.
 create or replace function verify_pin(p_role text, p_pin text)
 returns table (id uuid, role text, display_name text)
@@ -178,5 +202,6 @@ $$;
 
 grant execute on function get_profiles()             to anon;
 grant execute on function set_pin(text, text)        to anon;
+grant execute on function reset_pin(text, text)      to anon;
 grant execute on function verify_pin(text, text)     to anon;
 grant execute on function record_checkin(uuid)       to anon;
