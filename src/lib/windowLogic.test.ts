@@ -21,6 +21,7 @@ function inputs(overrides: Partial<WindowInputs>): WindowInputs {
     reminderSentAt: null,
     missedAlertSentAt: null,
     lateNotifiedAt: null,
+    checkinNotifiedAt: null,
     ...overrides,
   };
 }
@@ -131,6 +132,48 @@ describe('windowState — 10:00 missed escalation', () => {
   it('is idempotent — not due again after the alert was sent', () => {
     const d = windowState(inputs({ now: afterClose, missedAlertSentAt: new Date() }));
     expect(d.missedDue).toBe(false);
+  });
+});
+
+describe('windowState — on-time check-in notification to Iliana', () => {
+  it('is due once Nonna checks in on time, not yet notified', () => {
+    const d = windowState(
+      inputs({
+        now: new Date('2025-01-15T07:30:00+11:00'),
+        checkedIn: true,
+        checkedInAt: new Date('2025-01-15T07:30:00+11:00'),
+      })
+    );
+    expect(d.status).toBe('checked_in');
+    expect(d.checkinNotifyDue).toBe(true);
+  });
+
+  it('is NOT due before she has checked in', () => {
+    expect(windowState(inputs({})).checkinNotifyDue).toBe(false);
+  });
+
+  it('is idempotent — not due again once already notified', () => {
+    const d = windowState(
+      inputs({
+        now: new Date('2025-01-15T07:30:00+11:00'),
+        checkedIn: true,
+        checkedInAt: new Date('2025-01-15T07:30:00+11:00'),
+        checkinNotifiedAt: new Date('2025-01-15T07:31:00+11:00'),
+      })
+    );
+    expect(d.checkinNotifyDue).toBe(false);
+  });
+
+  it('does NOT fire for a late check-in (that uses lateReassuranceDue instead)', () => {
+    const d = windowState(
+      inputs({
+        now: new Date('2025-01-15T11:00:00+11:00'),
+        checkedIn: true,
+        checkedInAt: new Date('2025-01-15T10:45:00+11:00'),
+      })
+    );
+    expect(d.status).toBe('checked_in_late');
+    expect(d.checkinNotifyDue).toBe(false);
   });
 });
 

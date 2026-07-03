@@ -31,6 +31,7 @@ class FakeRepo implements CheckWindowRepo {
         reminder_sent_at: null,
         missed_alert_sent_at: null,
         late_checkin_notified_at: null,
+        checkin_notified_at: null,
       }
     );
   }
@@ -58,6 +59,10 @@ class FakeRepo implements CheckWindowRepo {
   }
   setLateNotified(date: string, atIso: string) {
     this.daily.set(date, { ...this.ds(date), late_checkin_notified_at: atIso });
+    return Promise.resolve();
+  }
+  setCheckinNotified(date: string, atIso: string) {
+    this.daily.set(date, { ...this.ds(date), checkin_notified_at: atIso });
     return Promise.resolve();
   }
   logNotification(row: NotificationLogInput) {
@@ -116,14 +121,19 @@ describe('runCheckWindow — check-in suppresses alerts', () => {
     expect(provider.sent).toHaveLength(1);
     expect(repo.logs[0].type).toBe('reminder');
 
-    // She checks in at 07:30.
+    // She checks in at 07:30 -> the on-time notification to Iliana fires once.
     repo.checkins.set('2025-01-15', '2025-01-15T07:30:00+11:00');
+    summary = await runCheckWindow(repo, provider, RECIPIENTS, t('2025-01-15T07:31:00+11:00'));
+    expect(summary.checkinNotifySent).toBe(true);
+    expect(provider.sent).toHaveLength(2);
+    expect(provider.sent[1].to).toBe('chat-iliana');
 
-    // 10:05 — window closed but she checked in -> no escalation.
+    // 10:05 — window closed but she checked in -> no escalation, and the on-time
+    // notification doesn't repeat.
     summary = await runCheckWindow(repo, provider, RECIPIENTS, t('2025-01-15T10:05:00+11:00'));
     expect(summary.status).toBe('checked_in');
     expect(summary.missedAlertSent).toBe(false);
-    expect(provider.sent).toHaveLength(1); // unchanged
+    expect(provider.sent).toHaveLength(2); // unchanged
   });
 });
 
@@ -155,6 +165,93 @@ describe('runCheckWindow — late check-in reassurance', () => {
     // Further polls send nothing.
     await runCheckWindow(repo, provider, RECIPIENTS, t('2025-01-15T10:46:00+11:00'));
     expect(provider.sent).toHaveLength(3);
+  });
+});
+
+describe('runCheckWindow — on-time check-in notification to Iliana', () => {
+  it('notifies Iliana once when Nonna checks in on time', async () => {
+    const repo = new FakeRepo();
+    const provider = new MockProvider();
+    repo.checkins.set('2025-01-15', '2025-01-15T07:30:00+11:00');
+
+    const summary = await runCheckWindow(
+      repo,
+      provider,
+      RECIPIENTS,
+      t('2025-01-15T07:31:00+11:00')
+    );
+    expect(summary.status).toBe('checked_in');
+    expect(summary.checkinNotifySent).toBe(true);
+    expect(provider.sent).toHaveLength(1);
+    expect(provider.sent[0].to).toBe('chat-iliana');
+    expect(repo.logs[0].type).toBe('checkin_iliana');
+
+    // Re-polling doesn't send it again.
+    await runCheckWindow(repo, provider, RECIPIENTS, t('2025-01-15T07:35:00+11:00'));
+    expect(provider.sent).toHaveLength(1);
+  });
+
+  it('does not fire this notification for a late check-in (uses lateReassurance instead)', async () => {
+    const repo = new FakeRepo();
+    const provider = new MockProvider();
+
+    // Missed escalation first, then a late check-in.
+    await runCheckWindow(repo, provider, RECIPIENTS, t('2025-01-15T10:05:00+11:00'));
+    repo.checkins.set('2025-01-15', '2025-01-15T10:40:00+11:00');
+    const summary = await runCheckWindow(
+      repo,
+      provider,
+      RECIPIENTS,
+      t('2025-01-15T10:41:00+11:00')
+    );
+    expect(summary.status).toBe('checked_in_late');
+    expect(summary.checkinNotifySent).toBe(false);
+    expect(summary.lateReassuranceSent).toBe(true);
+    expect(repo.logs.some((l) => l.type === 'checkin_iliana')).toBe(false);
+  });
+});
+
+describe('runCheckWindow — one-tap buttons (appUrl)', () => {
+  const APP_URL = 'https://checkin-app-inky.vercel.app';
+
+  it('omits buttons when appUrl is not provided', async () => {
+    const repo = new FakeRepo();
+    const provider = new MockProvider();
+    await runCheckWindow(repo, provider, RECIPIENTS, t('2025-01-15T07:00:00+11:00'));
+    expect(provider.sent[0].button).toBeUndefined();
+  });
+
+  it("adds a bold 'CHECK IN NOW' button to Nonna's reminder linking to /nonna", async () => {
+    const repo = new FakeRepo();
+    const provider = new MockProvider();
+    await runCheckWindow(
+      repo,
+      provider,
+      RECIPIENTS,
+      t('2025-01-15T07:00:00+11:00'),
+      APP_URL
+    );
+    expect(provider.sent[0].button).toEqual({
+      text: '✅ CHECK IN NOW',
+      url: `${APP_URL}/nonna`,
+    });
+  });
+
+  it("adds a bold 'OPEN DASHBOARD' button to Iliana's missed alert linking to /iliana", async () => {
+    const repo = new FakeRepo();
+    const provider = new MockProvider();
+    await runCheckWindow(
+      repo,
+      provider,
+      RECIPIENTS,
+      t('2025-01-15T10:05:00+11:00'),
+      APP_URL
+    );
+    const ilianaMsg = provider.sent.find((m) => m.to === 'chat-iliana');
+    expect(ilianaMsg?.button).toEqual({
+      text: '📋 OPEN DASHBOARD',
+      url: `${APP_URL}/iliana`,
+    });
   });
 });
 

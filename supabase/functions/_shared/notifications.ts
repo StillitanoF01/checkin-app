@@ -6,6 +6,8 @@
 export interface OutboundMessage {
   to: string; // recipient address for the channel — a Telegram chat ID
   body: string;
+  /** Optional one-tap action button (e.g. "Check In Now" linking straight into the app). */
+  button?: { text: string; url: string };
 }
 
 export interface SendResult {
@@ -28,11 +30,18 @@ export class TelegramProvider implements NotificationProvider {
   async send(msg: OutboundMessage): Promise<SendResult> {
     const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
 
+    const payload: Record<string, unknown> = { chat_id: msg.to, text: msg.body };
+    if (msg.button) {
+      payload.reply_markup = {
+        inline_keyboard: [[{ text: msg.button.text, url: msg.button.url }]],
+      };
+    }
+
     try {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: msg.to, text: msg.body }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok || data?.ok !== true) {

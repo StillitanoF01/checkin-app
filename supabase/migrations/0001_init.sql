@@ -44,13 +44,14 @@ create table if not exists daily_status (
   checkin_date             date primary key,
   reminder_sent_at         timestamptz,
   missed_alert_sent_at     timestamptz,
-  late_checkin_notified_at timestamptz
+  late_checkin_notified_at timestamptz,
+  checkin_notified_at      timestamptz
 );
 
 create table if not exists notifications_log (
   id                  uuid primary key default gen_random_uuid(),
   type                text not null check (type in
-                        ('reminder','missed_nonna','missed_iliana','late_reassurance')),
+                        ('reminder','missed_nonna','missed_iliana','late_reassurance','checkin_iliana')),
   recipient           text not null,
   body                text not null,
   provider            text not null default 'telegram',

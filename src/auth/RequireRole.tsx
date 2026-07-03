@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useSession } from './session';
 import type { Role } from '../lib/types';
@@ -11,11 +12,17 @@ export default function RequireRole({
   role: Role;
   children: ReactNode;
 }) {
-  const { session } = useSession();
+  const { session, signOut } = useSession();
 
-  if (!session) return <Navigate to={`/login/${role}`} replace />;
-  // Signed in as the other profile — send them to their own screen.
-  if (session.role !== role) return <Navigate to={`/${session.role}`} replace />;
+  // Signed in as the OTHER profile (e.g. a shared test device, or a Nonna deep-link
+  // opened on a phone last signed in as Iliana) — clear that stale session so the
+  // person lands on their own PIN screen instead of being bounced to someone else's.
+  const mismatched = session !== null && session.role !== role;
+  useEffect(() => {
+    if (mismatched) signOut();
+  }, [mismatched, signOut]);
+
+  if (!session || mismatched) return <Navigate to={`/login/${role}`} replace />;
 
   return <>{children}</>;
 }

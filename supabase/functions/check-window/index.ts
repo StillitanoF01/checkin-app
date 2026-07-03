@@ -22,6 +22,7 @@ function makeRepo(
     reminder_sent_at: null,
     missed_alert_sent_at: null,
     late_checkin_notified_at: null,
+    checkin_notified_at: null,
   };
 
   return {
@@ -55,7 +56,9 @@ function makeRepo(
     async getDailyStatus(date) {
       const { data, error } = await supabase
         .from('daily_status')
-        .select('reminder_sent_at, missed_alert_sent_at, late_checkin_notified_at')
+        .select(
+          'reminder_sent_at, missed_alert_sent_at, late_checkin_notified_at, checkin_notified_at'
+        )
         .eq('checkin_date', date)
         .maybeSingle();
       if (error) throw error;
@@ -78,6 +81,15 @@ function makeRepo(
         .from('daily_status')
         .upsert(
           { checkin_date: date, late_checkin_notified_at: atIso },
+          { onConflict: 'checkin_date' }
+        );
+      if (error) throw error;
+    },
+    async setCheckinNotified(date, atIso) {
+      const { error } = await supabase
+        .from('daily_status')
+        .upsert(
+          { checkin_date: date, checkin_notified_at: atIso },
           { onConflict: 'checkin_date' }
         );
       if (error) throw error;
@@ -129,6 +141,10 @@ Deno.serve(async (req) => {
       iliana: env('TELEGRAM_MUM_CHAT_ID') ?? null,
     };
 
+    // Base URL of the deployed frontend, used to add a one-tap button to messages
+    // (e.g. https://checkin-app-inky.vercel.app). Optional — omitted if unset.
+    const appUrl = env('APP_URL')?.replace(/\/$/, '');
+
     // Allow the caller to pass an explicit `now` (for manual testing); default to real time.
     let now = new Date();
     if (req.method === 'POST') {
@@ -136,7 +152,7 @@ Deno.serve(async (req) => {
       if (body?.now) now = new Date(body.now);
     }
 
-    const summary = await runCheckWindow(repo, provider, recipients, now);
+    const summary = await runCheckWindow(repo, provider, recipients, now, appUrl);
     return new Response(JSON.stringify(summary), {
       headers: { 'Content-Type': 'application/json' },
     });

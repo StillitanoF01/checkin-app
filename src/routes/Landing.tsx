@@ -1,14 +1,22 @@
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useSession } from '../auth/session';
+import type { Role } from '../lib/types';
 import './Landing.css';
 
 export default function Landing() {
   const navigate = useNavigate();
   const { session } = useSession();
 
-  // Remembered device: send a signed-in user straight to their screen so Nonna
-  // never has to re-log-in each morning.
-  if (session) return <Navigate to={`/${session.role}`} replace />;
+  // Always shows the chooser on load/refresh. If this device is already signed in as
+  // that role, tapping the button skips straight past the PIN (Nonna never re-enters
+  // it each morning); otherwise it goes to that role's login/setup screen.
+  const go = (role: Role) => {
+    if (session && session.role === role) {
+      navigate(`/${role}`);
+    } else {
+      navigate(`/login/${role}`);
+    }
+  };
 
   return (
     <main className="landing">
@@ -24,14 +32,14 @@ export default function Landing() {
         <button
           type="button"
           className="landing__btn landing__btn--nonna"
-          onClick={() => navigate('/login/nonna')}
+          onClick={() => go('nonna')}
         >
           NONNA
         </button>
         <button
           type="button"
           className="landing__btn landing__btn--iliana"
-          onClick={() => navigate('/login/iliana')}
+          onClick={() => go('iliana')}
         >
           ILIANA
         </button>

@@ -58,6 +58,8 @@ export interface WindowInputs {
   reminderSentAt: Date | null;
   missedAlertSentAt: Date | null;
   lateNotifiedAt: Date | null;
+  /** Set once Iliana has been told about today's on-time check-in. */
+  checkinNotifiedAt: Date | null;
 }
 
 export interface WindowDecision {
@@ -68,6 +70,8 @@ export interface WindowDecision {
   missedDue: boolean;
   /** Reassurance to Iliana after a late check-in is due and not yet sent. */
   lateReassuranceDue: boolean;
+  /** Notify Iliana that Nonna checked in on time (within the window) — once per day. */
+  checkinNotifyDue: boolean;
   /** Display status for the dashboard. */
   status: DayStatus;
 }
@@ -111,5 +115,17 @@ export function windowState(input: WindowInputs): WindowDecision {
     status = phase === 'closed' ? 'missed' : 'pending';
   }
 
-  return { phase, reminderDue, missedDue, lateReassuranceDue, status };
+  // On-time notification: tell Iliana Nonna checked in within the window — once,
+  // and only for the on-time case (the late/missed case has its own reassurance above).
+  const checkinNotifyDue =
+    status === 'checked_in' && input.checkinNotifiedAt === null;
+
+  return {
+    phase,
+    reminderDue,
+    missedDue,
+    lateReassuranceDue,
+    checkinNotifyDue,
+    status,
+  };
 }

@@ -16,3 +16,7 @@ export function missedIlianaMsg(nonnaName: string): string {
 export function lateReassuranceMsg(nonnaName: string, timeStr: string): string {
   return `Good news: ${nonnaName} has now checked in (at ${timeStr}). All is well. ❤️`;
 }
+
+export function onTimeCheckinMsg(nonnaName: string, timeStr: string): string {
+  return `${nonnaName} checked in this morning at ${timeStr}. All good! ✅`;
+}

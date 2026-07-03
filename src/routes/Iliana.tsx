@@ -75,6 +75,7 @@ export default function Iliana() {
           reminderSentAt: null,
           missedAlertSentAt: null,
           lateNotifiedAt: null,
+          checkinNotifiedAt: null,
         });
 
         setSettings(settingsRow);

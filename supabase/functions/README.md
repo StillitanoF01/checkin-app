@@ -13,12 +13,17 @@ supabase secrets set \
   TELEGRAM_BOT_TOKEN=123456:ABC-your-bot-token \
   TELEGRAM_GRANDMA_CHAT_ID=111111111 \
   TELEGRAM_MUM_CHAT_ID=222222222 \
-  CRON_SECRET=some-long-random-string
+  CRON_SECRET=some-long-random-string \
+  APP_URL=https://your-app.vercel.app
 # SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically at runtime.
 ```
 Leave `NOTIFY_PROVIDER=mock` (or unset) to record sends to `notifications_log` without
 actually messaging — useful while wiring things up. To find a chat ID, message your bot
 and read `chat.id` from `https://api.telegram.org/bot<TOKEN>/getUpdates`.
+
+`APP_URL` is optional. When set, every Telegram message includes a one-tap inline button
+("Check In Now" for Nonna's messages, "Open Dashboard" for Iliana's) linking straight to
+`APP_URL/nonna` or `APP_URL/iliana`. Omit it to send plain-text messages with no button.
 
 Adding more recipients later is a small change: add the env var, then map it in the
 `recipients` object in `check-window/index.ts` and the `Recipients` type in

@@ -12,6 +12,7 @@ import {
   lateReassuranceMsg,
   missedIlianaMsg,
   missedNonnaMsg,
+  onTimeCheckinMsg,
   reminderMsg,
 } from './messages.ts';
 
@@ -32,13 +33,15 @@ export interface DailyStatusRow {
   reminder_sent_at: string | null;
   missed_alert_sent_at: string | null;
   late_checkin_notified_at: string | null;
+  checkin_notified_at: string | null;
 }
 
 export type NotificationType =
   | 'reminder'
   | 'missed_nonna'
   | 'missed_iliana'
-  | 'late_reassurance';
+  | 'late_reassurance'
+  | 'checkin_iliana';
 
 export interface NotificationLogInput {
   type: NotificationType;
@@ -61,6 +64,7 @@ export interface CheckWindowRepo {
   setReminderSent(date: string, atIso: string): Promise<void>;
   setMissedAlertSent(date: string, atIso: string): Promise<void>;
   setLateNotified(date: string, atIso: string): Promise<void>;
+  setCheckinNotified(date: string, atIso: string): Promise<void>;
   logNotification(row: NotificationLogInput): Promise<void>;
   formatTime(iso: string, tz: string): string;
 }
@@ -72,6 +76,7 @@ export interface RunSummary {
   reminderSent: boolean;
   missedAlertSent: boolean; // true only if Iliana's alert was confirmed sent
   lateReassuranceSent: boolean;
+  checkinNotifySent: boolean;
   failures: number;
 }
 
@@ -79,7 +84,10 @@ export async function runCheckWindow(
   repo: CheckWindowRepo,
   provider: NotificationProvider,
   recipients: Recipients,
-  now: Date
+  now: Date,
+  /** Base app URL (no trailing slash), e.g. "https://checkin-app-inky.vercel.app".
+   *  When set, messages include a one-tap button straight into the app. */
+  appUrl?: string
 ): Promise<RunSummary> {
   const settings = await repo.getSettings();
   const nonna = await repo.getNonna();
@@ -105,6 +113,7 @@ export async function runCheckWindow(
     lateNotifiedAt: ds.late_checkin_notified_at
       ? new Date(ds.late_checkin_notified_at)
       : null,
+    checkinNotifiedAt: ds.checkin_notified_at ? new Date(ds.checkin_notified_at) : null,
   });
 
   const nowIso = now.toISOString();
@@ -112,11 +121,23 @@ export async function runCheckWindow(
   let reminderSent = false;
   let missedAlertSent = false;
   let lateReassuranceSent = false;
+  let checkinNotifySent = false;
+
+  // One-tap buttons straight into each person's screen (omitted if no appUrl is set).
+  // Telegram doesn't expose a size/scale control for inline buttons — a single button
+  // always spans the full message width — so boldness here comes from the label text.
+  const nonnaButton = appUrl
+    ? { text: '✅ CHECK IN NOW', url: `${appUrl}/nonna` }
+    : undefined;
+  const ilianaButton = appUrl
+    ? { text: '📋 OPEN DASHBOARD', url: `${appUrl}/iliana` }
+    : undefined;
 
   const deliver = async (
     type: NotificationType,
     to: string | null,
-    body: string
+    body: string,
+    button?: { text: string; url: string }
   ): Promise<boolean> => {
     if (!to) {
       // No chat ID configured — log a failure so it's visible, don't crash.
@@ -132,7 +153,7 @@ export async function runCheckWindow(
       failures += 1;
       return false;
     }
-    const res = await provider.send({ to, body });
+    const res = await provider.send({ to, body, button });
     await repo.logNotification({
       type,
       recipient: to,
@@ -148,7 +169,12 @@ export async function runCheckWindow(
 
   // 1) 06:00 reminder to Nonna. Flag only on success so failures retry next poll.
   if (decision.reminderDue) {
-    const ok = await deliver('reminder', recipients.nonna, reminderMsg(nonna.display_name));
+    const ok = await deliver(
+      'reminder',
+      recipients.nonna,
+      reminderMsg(nonna.display_name),
+      nonnaButton
+    );
     if (ok) {
       await repo.setReminderSent(today, nowIso);
       reminderSent = true;
@@ -159,11 +185,17 @@ export async function runCheckWindow(
   //    we only set the idempotency flag once IT is confirmed sent, so a failed Iliana
   //    send is retried on the next poll.
   if (decision.missedDue) {
-    await deliver('missed_nonna', recipients.nonna, missedNonnaMsg(nonna.display_name));
+    await deliver(
+      'missed_nonna',
+      recipients.nonna,
+      missedNonnaMsg(nonna.display_name),
+      nonnaButton
+    );
     const ilianaOk = await deliver(
       'missed_iliana',
       recipients.iliana,
-      missedIlianaMsg(nonna.display_name)
+      missedIlianaMsg(nonna.display_name),
+      ilianaButton
     );
     if (ilianaOk) {
       await repo.setMissedAlertSent(today, nowIso);
@@ -177,11 +209,28 @@ export async function runCheckWindow(
     const ok = await deliver(
       'late_reassurance',
       recipients.iliana,
-      lateReassuranceMsg(nonna.display_name, timeStr)
+      lateReassuranceMsg(nonna.display_name, timeStr),
+      ilianaButton
     );
     if (ok) {
       await repo.setLateNotified(today, nowIso);
       lateReassuranceSent = true;
+    }
+  }
+
+  // 4) Tell Iliana Nonna checked in on time (within the window) — a quiet daily "all
+  //    good" ping, separate from the late-reassurance case above.
+  if (decision.checkinNotifyDue) {
+    const timeStr = checkin ? repo.formatTime(checkin.checked_in_at, tz) : '';
+    const ok = await deliver(
+      'checkin_iliana',
+      recipients.iliana,
+      onTimeCheckinMsg(nonna.display_name, timeStr),
+      ilianaButton
+    );
+    if (ok) {
+      await repo.setCheckinNotified(today, nowIso);
+      checkinNotifySent = true;
     }
   }
 
@@ -192,6 +241,7 @@ export async function runCheckWindow(
     reminderSent,
     missedAlertSent,
     lateReassuranceSent,
+    checkinNotifySent,
     failures,
   };
 }
