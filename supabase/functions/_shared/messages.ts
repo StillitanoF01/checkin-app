@@ -8,7 +8,7 @@
 const MESSAGE_NAME = 'Luciana';
 
 export function reminderMsg(_nonnaName: string): string {
-  return `Buongiorno ${MESSAGE_NAME}! Don't forget to "I'm OK" in your Check-In app this morning.`;
+  return `Buongiorno ${MESSAGE_NAME}! Don't forget to tap "I'm OK" in your Check-In app this morning.`;
 }
 
 export function missedNonnaMsg(_nonnaName: string): string {
