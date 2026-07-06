@@ -43,6 +43,43 @@ export function parseHHMM(hhmm: string): number {
   return (h || 0) * 60 + (m || 0);
 }
 
+export type Session = 'day' | 'night';
+
+export interface SessionWindow {
+  start: string; // 'HH:MM' local
+  end: string; // 'HH:MM' local
+}
+
+/**
+ * Which check-in is "front and center" right now, given both the day and night windows.
+ * Lets Nonna's screen show the right button/confirmation without her having to pick a
+ * mode. The boundary between the two is the midpoint of each gap between the windows, so
+ * it adapts automatically if the windows are ever reconfigured (no hardcoded "2pm").
+ */
+export function activeSessionForTime(
+  now: Date,
+  tz: string,
+  day: SessionWindow,
+  night: SessionWindow
+): Session {
+  const nowMin = localMinutesInTz(now, tz);
+  const dayStart = parseHHMM(day.start);
+  const dayEnd = parseHHMM(day.end);
+  const nightStart = parseHHMM(night.start);
+  const nightEnd = parseHHMM(night.end);
+
+  // Afternoon gap: day window closed, night window not yet open.
+  const afternoonBoundary = Math.round((dayEnd + nightStart) / 2);
+  // Overnight gap: night window closed, next day's window not yet open (wraps midnight).
+  const overnightBoundary = Math.round((nightEnd + (dayStart + 1440)) / 2) % 1440;
+
+  if (overnightBoundary < afternoonBoundary) {
+    return nowMin >= overnightBoundary && nowMin < afternoonBoundary ? 'day' : 'night';
+  }
+  // Degenerate case (shouldn't happen with sane, non-overlapping windows).
+  return nowMin >= overnightBoundary || nowMin < afternoonBoundary ? 'day' : 'night';
+}
+
 export type WindowPhase = 'before' | 'open' | 'closed';
 
 export interface WindowInputs {

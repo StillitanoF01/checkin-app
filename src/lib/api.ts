@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Checkin, Profile, Role, Settings } from './types';
+import type { Checkin, Profile, Role, Session, Settings } from './types';
 import * as mock from './mockApi';
 
 // Dev-only: when the Supabase URL is the placeholder, use the in-memory mock so the
@@ -59,10 +59,14 @@ export async function verifyPin(
 
 // ── Check-ins ──
 
-export async function recordCheckin(profileId: string): Promise<Checkin> {
-  if (USE_MOCK) return mock.recordCheckin(profileId);
+export async function recordCheckin(
+  profileId: string,
+  session: Session = 'day'
+): Promise<Checkin> {
+  if (USE_MOCK) return mock.recordCheckin(profileId, session);
   const { data, error } = await supabase.rpc('record_checkin', {
     p_profile_id: profileId,
+    p_session: session,
   });
   if (error) throw error;
   return (data ?? [])[0] as Checkin;
@@ -70,14 +74,16 @@ export async function recordCheckin(profileId: string): Promise<Checkin> {
 
 export async function getCheckinForDate(
   profileId: string,
-  date: string
+  date: string,
+  session: Session = 'day'
 ): Promise<Checkin | null> {
-  if (USE_MOCK) return mock.getCheckinForDate(profileId, date);
+  if (USE_MOCK) return mock.getCheckinForDate(profileId, date, session);
   const { data, error } = await supabase
     .from('checkins')
     .select('*')
     .eq('profile_id', profileId)
     .eq('checkin_date', date)
+    .eq('session', session)
     .maybeSingle();
   if (error) throw error;
   return (data as Checkin | null) ?? null;

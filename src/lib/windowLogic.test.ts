@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  activeSessionForTime,
   localDateInTz,
   localMinutesInTz,
   parseHHMM,
@@ -301,6 +302,37 @@ describe('windowState — full missed→late sequence is idempotent on re-run', 
     );
     expect(d.lateReassuranceDue).toBe(false);
     expect(d.missedDue).toBe(false);
+  });
+});
+
+describe('activeSessionForTime — picking morning vs goodnight for Nonna\'s screen', () => {
+  const DAY = { start: '06:00', end: '10:00' };
+  const NIGHT = { start: '18:00', end: '22:00' };
+  const at = (time: string) => new Date(`2025-01-15T${time}+11:00`);
+
+  it('is "day" while the morning window is open', () => {
+    expect(activeSessionForTime(at('07:00:00'), SYD, DAY, NIGHT)).toBe('day');
+  });
+
+  it('is "day" for an early riser, well before the window opens', () => {
+    expect(activeSessionForTime(at('03:00:00'), SYD, DAY, NIGHT)).toBe('day');
+  });
+
+  it('is "night" in the small hours before the day arc starts (overnight boundary)', () => {
+    // Overnight boundary is the midpoint of 22:00 -> next day's 06:00, i.e. 02:00.
+    expect(activeSessionForTime(at('01:00:00'), SYD, DAY, NIGHT)).toBe('night');
+    expect(activeSessionForTime(at('02:00:00'), SYD, DAY, NIGHT)).toBe('day');
+  });
+
+  it('is "night" in the afternoon gap once the morning window has long closed', () => {
+    // Afternoon boundary is the midpoint of 10:00 -> 18:00, i.e. 14:00.
+    expect(activeSessionForTime(at('13:59:00'), SYD, DAY, NIGHT)).toBe('day');
+    expect(activeSessionForTime(at('14:00:00'), SYD, DAY, NIGHT)).toBe('night');
+    expect(activeSessionForTime(at('15:00:00'), SYD, DAY, NIGHT)).toBe('night');
+  });
+
+  it('is "night" while the goodnight window is open', () => {
+    expect(activeSessionForTime(at('20:00:00'), SYD, DAY, NIGHT)).toBe('night');
   });
 });
 

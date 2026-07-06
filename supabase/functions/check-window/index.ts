@@ -1,7 +1,8 @@
 // Scheduled Edge Function. Invoked every ~5 minutes by pg_cron (see
-// supabase/migrations/0002_scheduler.sql). Evaluates the check-in window for today and
-// sends any due notifications via the configured provider. Idempotent by construction:
-// per-day flags in daily_status gate every send, so frequent polling is safe.
+// supabase/migrations/0002_scheduler.sql). Evaluates both the day and night check-in
+// windows for today and sends any due notifications via the configured provider.
+// Idempotent by construction: per-day-per-session flags in daily_status gate every
+// send, so frequent polling is safe.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { providerFromEnv } from '../_shared/notifications.ts';
@@ -29,7 +30,7 @@ function makeRepo(
     async getSettings() {
       const { data, error } = await supabase
         .from('settings')
-        .select('timezone, window_start, window_end')
+        .select('timezone, window_start, window_end, night_window_start, night_window_end')
         .single();
       if (error) throw error;
       return data as unknown as SettingsRow;
@@ -43,54 +44,62 @@ function makeRepo(
       if (error) throw error;
       return data as unknown as { id: string; display_name: string };
     },
-    async getCheckinForDate(profileId, date) {
+    async getCheckinForDate(profileId, date, session) {
       const { data, error } = await supabase
         .from('checkins')
         .select('checked_in_at')
         .eq('profile_id', profileId)
         .eq('checkin_date', date)
+        .eq('session', session)
         .maybeSingle();
       if (error) throw error;
       return (data as unknown as { checked_in_at: string } | null) ?? null;
     },
-    async getDailyStatus(date) {
+    async getDailyStatus(date, session) {
       const { data, error } = await supabase
         .from('daily_status')
         .select(
           'reminder_sent_at, missed_alert_sent_at, late_checkin_notified_at, checkin_notified_at'
         )
         .eq('checkin_date', date)
+        .eq('session', session)
         .maybeSingle();
       if (error) throw error;
       return (data as unknown as DailyStatusRow) ?? emptyDaily;
     },
-    async setReminderSent(date, atIso) {
-      const { error } = await supabase
-        .from('daily_status')
-        .upsert({ checkin_date: date, reminder_sent_at: atIso }, { onConflict: 'checkin_date' });
-      if (error) throw error;
-    },
-    async setMissedAlertSent(date, atIso) {
-      const { error } = await supabase
-        .from('daily_status')
-        .upsert({ checkin_date: date, missed_alert_sent_at: atIso }, { onConflict: 'checkin_date' });
-      if (error) throw error;
-    },
-    async setLateNotified(date, atIso) {
+    async setReminderSent(date, session, atIso) {
       const { error } = await supabase
         .from('daily_status')
         .upsert(
-          { checkin_date: date, late_checkin_notified_at: atIso },
-          { onConflict: 'checkin_date' }
+          { checkin_date: date, session, reminder_sent_at: atIso },
+          { onConflict: 'checkin_date,session' }
         );
       if (error) throw error;
     },
-    async setCheckinNotified(date, atIso) {
+    async setMissedAlertSent(date, session, atIso) {
       const { error } = await supabase
         .from('daily_status')
         .upsert(
-          { checkin_date: date, checkin_notified_at: atIso },
-          { onConflict: 'checkin_date' }
+          { checkin_date: date, session, missed_alert_sent_at: atIso },
+          { onConflict: 'checkin_date,session' }
+        );
+      if (error) throw error;
+    },
+    async setLateNotified(date, session, atIso) {
+      const { error } = await supabase
+        .from('daily_status')
+        .upsert(
+          { checkin_date: date, session, late_checkin_notified_at: atIso },
+          { onConflict: 'checkin_date,session' }
+        );
+      if (error) throw error;
+    },
+    async setCheckinNotified(date, session, atIso) {
+      const { error } = await supabase
+        .from('daily_status')
+        .upsert(
+          { checkin_date: date, session, checkin_notified_at: atIso },
+          { onConflict: 'checkin_date,session' }
         );
       if (error) throw error;
     },

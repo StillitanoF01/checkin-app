@@ -1,9 +1,9 @@
 // Shared domain types (mirror the Supabase schema in supabase/migrations).
 
-// DayStatus is owned by the dependency-free windowLogic module; re-export it here so
-// callers can import all domain types from one place.
-import type { DayStatus } from './windowLogic';
-export type { DayStatus };
+// DayStatus/Session are owned by the dependency-free windowLogic module; re-export them
+// here so callers can import all domain types from one place.
+import type { DayStatus, Session } from './windowLogic';
+export type { DayStatus, Session };
 
 export type Role = 'nonna' | 'iliana';
 
@@ -17,8 +17,10 @@ export interface Profile {
 export interface Settings {
   id: string;
   timezone: string; // IANA, e.g. 'Australia/Sydney'
-  window_start: string; // 'HH:MM' local
+  window_start: string; // 'HH:MM' local — day (morning) window
   window_end: string; // 'HH:MM' local
+  night_window_start: string; // 'HH:MM' local — night (goodnight) window
+  night_window_end: string; // 'HH:MM' local
 }
 
 export interface Checkin {
@@ -26,10 +28,12 @@ export interface Checkin {
   profile_id: string;
   checkin_date: string; // 'YYYY-MM-DD' local date
   checked_in_at: string; // ISO timestamptz
+  session: Session;
 }
 
 export interface DailyStatus {
   checkin_date: string;
+  session: Session;
   status: DayStatus;
   reminder_sent_at: string | null;
   missed_alert_sent_at: string | null;
@@ -37,14 +41,16 @@ export interface DailyStatus {
 }
 
 export type NotificationType =
-  | 'reminder' // 06:00 to Nonna
-  | 'missed_nonna' // 10:00 to Nonna
-  | 'missed_iliana' // 10:00 to Iliana
-  | 'late_reassurance'; // late check-in -> Iliana
+  | 'reminder' // window open to Nonna
+  | 'missed_nonna' // window close to Nonna
+  | 'missed_iliana' // window close to Iliana
+  | 'late_reassurance' // late check-in -> Iliana
+  | 'checkin_iliana'; // on-time check-in -> Iliana
 
 export interface NotificationLogRow {
   id: string;
   type: NotificationType;
+  session: Session;
   recipient: string;
   body: string;
   sent_at: string;

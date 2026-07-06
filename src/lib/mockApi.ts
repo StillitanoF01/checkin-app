@@ -3,7 +3,7 @@
 // demoed/verified locally without a Supabase project. State persists in localStorage so
 // check-ins survive a reload.
 
-import type { Checkin, Profile, Role, Settings } from './types';
+import type { Checkin, Profile, Role, Session, Settings } from './types';
 import { localDateInTz } from './windowLogic';
 
 const NONNA_ID = 'mock-nonna';
@@ -31,6 +31,8 @@ function load(): Store {
       timezone: 'Australia/Sydney',
       window_start: '06:00',
       window_end: '10:00',
+      night_window_start: '18:00',
+      night_window_end: '22:00',
     },
     checkins: [],
   };
@@ -72,17 +74,21 @@ export async function verifyPin(
   });
 }
 
-export async function recordCheckin(profileId: string): Promise<Checkin> {
+export async function recordCheckin(
+  profileId: string,
+  session: Session = 'day'
+): Promise<Checkin> {
   const date = localDateInTz(new Date(), store.settings.timezone);
   let existing = store.checkins.find(
-    (c) => c.profile_id === profileId && c.checkin_date === date
+    (c) => c.profile_id === profileId && c.checkin_date === date && c.session === session
   );
   if (!existing) {
     existing = {
-      id: `mock-${date}`,
+      id: `mock-${date}-${session}`,
       profile_id: profileId,
       checkin_date: date,
       checked_in_at: new Date().toISOString(),
+      session,
     };
     store.checkins.push(existing);
     save();
@@ -92,11 +98,12 @@ export async function recordCheckin(profileId: string): Promise<Checkin> {
 
 export async function getCheckinForDate(
   profileId: string,
-  date: string
+  date: string,
+  session: Session = 'day'
 ): Promise<Checkin | null> {
   return delay(
     store.checkins.find(
-      (c) => c.profile_id === profileId && c.checkin_date === date
+      (c) => c.profile_id === profileId && c.checkin_date === date && c.session === session
     ) ?? null
   );
 }
